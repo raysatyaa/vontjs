@@ -1,11 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
-export interface VontClientOptions {
-  pagesGlob: Record<string, { default: React.ComponentType }>;
-  notFoundComponent?: React.ComponentType;
-}
+import type { VontClientOptions } from '../types/index.js';
 
 /**
  * 将文件路由转换为 React Router 路由路径

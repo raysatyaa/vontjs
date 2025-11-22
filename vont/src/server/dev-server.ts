@@ -8,7 +8,9 @@ import koaConnect from 'koa-connect';
 import type Router from 'koa-router';
 import { createApp, registerApiRoutes } from './app.js';
 import { RouteRegistry } from './route-registry.js';
-import type { DevServerOptions } from '../types/index.js';
+import type { DevServerOptions, VontConfig } from '../types/index.js';
+import { loadConfig } from '../config/loader.js';
+import { generateVirtualClient } from '../generators/virtual-client.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const __filename = fileURLToPath(import.meta.url);
@@ -30,54 +32,48 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
       console.warn('⚠️  tsx not available, TypeScript API routes may not work');
     }
 
-    // 确定工作目录
+    // 加载配置
     const rootDir = options?.root || process.cwd();
-    const apiDir = options?.apiDir || path.join(rootDir, 'src', 'api');
-    const pagesDir = options?.pagesDir || path.join(rootDir, 'src', 'pages');
-    const PORT = options?.port || parseInt(process.env.PORT || '3000');
-    const HOST = options?.host || process.env.HOST || '0.0.0.0';
-    const HMR_PORT = options?.hmrPort || PORT + 1;
+    const config: VontConfig = await loadConfig(rootDir);
+    
+    // 合并选项和配置
+    const apiDir = options?.apiDir || config.apiDir || path.join(rootDir, 'src', 'api');
+    const pagesDir = options?.pagesDir || config.pagesDir || path.join(rootDir, 'src', 'pages');
+    const PORT = options?.port || config.port || 3000;
+    const HOST = options?.host || config.host || '0.0.0.0';
+    const HMR_PORT = options?.hmrPort || config.server?.hmrPort || PORT + 1;
 
     console.log('🔧 Initializing development server...');
 
     // 生成虚拟 client 入口
-    const virtualClientEntry = `
-import { renderVontApp } from '@vont/core/client';
-
-// 动态导入样式（如果存在）
-const styleModules = import.meta.glob('/src/styles/**/*.css', { eager: true });
-
-// 动态导入所有页面
-const pageModules = import.meta.glob('/src/pages/**/*.{tsx,jsx}', { eager: true });
-
-// 渲染应用
-renderVontApp({
-  pagesGlob: pageModules,
-});
-`.trim();
+    const virtualClientEntry = generateVirtualClient();
 
     // 创建 Vite 服务器
+    const vitePlugins = [
+      // 虚拟模块插件
+      {
+        name: 'vont-virtual-client',
+        resolveId(id: string) {
+          if (id === '/client.tsx' || id === '/client.jsx') {
+            return '\0virtual:vont-client';
+          }
+          return null;
+        },
+        load(id: string) {
+          if (id === '\0virtual:vont-client') {
+            return virtualClientEntry;
+          }
+          return null;
+        },
+      },
+      ...(config.vitePlugins || []),
+    ];
+
+    const viteConfig = config.viteConfig || {};
     const vite: ViteDevServer = await createViteServer({
       appType: 'custom',
       root: rootDir,
-      plugins: [
-        // 虚拟模块插件
-        {
-          name: 'vont-virtual-client',
-          resolveId(id) {
-            if (id === '/client.tsx' || id === '/client.jsx') {
-              return '\0virtual:vont-client';
-            }
-            return null;
-          },
-          load(id) {
-            if (id === '\0virtual:vont-client') {
-              return virtualClientEntry;
-            }
-            return null;
-          },
-        },
-      ],
+      plugins: vitePlugins,
       server: {
         middlewareMode: true,
         hmr: {
@@ -85,6 +81,7 @@ renderVontApp({
         },
       },
       logLevel: 'info',
+      ...viteConfig,
     });
 
     console.log('✅ Vite server initialized');
@@ -93,7 +90,7 @@ renderVontApp({
     const app = createApp();
 
     // 初始化路由注册表
-    const registry = new RouteRegistry(apiDir, pagesDir, options?.apiPrefix);
+    const registry = new RouteRegistry(apiDir, pagesDir, config.apiPrefix);
     await registry.scan();
 
     // 注册 API 路由（必须在 Vite 中间件之前）

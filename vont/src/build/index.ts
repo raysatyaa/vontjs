@@ -1,0 +1,189 @@
+import { build as esbuild } from 'esbuild';
+import { build as viteBuild } from 'vite';
+import path from 'path';
+import { promises as fs } from 'fs';
+import type { BuildOptions, VontConfig } from '../types/index.js';
+import { loadConfig } from '../config/loader.js';
+import { generateVirtualClient } from '../generators/virtual-client.js';
+import { generateVirtualServer } from '../generators/virtual-server.js';
+
+/**
+ * 递归查找所有 API 文件
+ */
+async function findApiFiles(dir: string): Promise<string[]> {
+  const files: string[] = [];
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        files.push(...await findApiFiles(fullPath));
+      } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+        files.push(fullPath);
+      }
+    }
+  } catch (error) {
+    // 目录不存在
+  }
+
+  return files;
+}
+
+/**
+ * 清理临时文件
+ */
+async function cleanupTempFile(filePath: string, directory?: string): Promise<void> {
+  try {
+    await fs.unlink(filePath);
+    
+    // 如果指定了目录，尝试删除空目录
+    if (directory) {
+      try {
+        const dirFiles = await fs.readdir(directory);
+        if (dirFiles.length === 0) {
+          await fs.rmdir(directory);
+        }
+      } catch {
+        // 忽略错误
+      }
+    }
+  } catch {
+    // 忽略错误
+  }
+}
+
+/**
+ * 构建项目
+ */
+export async function buildProject(options?: BuildOptions): Promise<void> {
+  try {
+    // 加载配置
+    const rootDir = options?.root || process.cwd();
+    const config: VontConfig = await loadConfig(rootDir);
+    
+    // 合并构建选项
+    const outDir = options?.outDir || config.outDir || path.join(rootDir, 'dist');
+    const serverDir = options?.serverDir || path.join(outDir, 'server');
+    const apiDir = options?.apiDir || config.apiDir || path.join(rootDir, 'src', 'api');
+
+    console.log('🔨 Building project...\n');
+
+    // ========================================
+    // 1. 生成虚拟 client.tsx
+    // ========================================
+    const clientPath = path.join(rootDir, 'client.tsx');
+    const clientExists = await fs.access(clientPath).then(() => true).catch(() => false);
+    
+    if (!clientExists) {
+      console.log('📝 Generating virtual client.tsx...');
+      const virtualClientContent = generateVirtualClient();
+      await fs.writeFile(clientPath, virtualClientContent, 'utf-8');
+      console.log('✅ Virtual client.tsx generated\n');
+    }
+
+    // ========================================
+    // 2. 构建前端代码
+    // ========================================
+    console.log('📦 Building frontend...');
+    
+    // 合并用户的 Vite 配置
+    const viteConfig = config.viteConfig || {};
+    await viteBuild({
+      root: rootDir,
+      plugins: config.vitePlugins || [],
+      ...viteConfig,
+    });
+    
+    console.log('✅ Frontend built\n');
+
+    // 清理生成的 client.tsx
+    if (!clientExists) {
+      await cleanupTempFile(clientPath);
+    }
+
+    // ========================================
+    // 3. 生成虚拟 server/index.ts
+    // ========================================
+    console.log('📦 Building backend...');
+    
+    await fs.mkdir(serverDir, { recursive: true });
+
+    const serverIndexPath = path.join(rootDir, 'server', 'index.ts');
+    const serverExists = await fs.access(serverIndexPath).then(() => true).catch(() => false);
+    
+    if (!serverExists) {
+      await fs.mkdir(path.join(rootDir, 'server'), { recursive: true });
+      const virtualServerContent = generateVirtualServer();
+      await fs.writeFile(serverIndexPath, virtualServerContent, 'utf-8');
+    }
+
+    // ========================================
+    // 4. 编译后端代码
+    // ========================================
+    const serverFiles = [serverIndexPath];
+
+    await esbuild({
+      entryPoints: serverFiles,
+      outdir: serverDir,
+      bundle: true,
+      format: 'esm',
+      platform: 'node',
+      target: config.build?.target || 'es2020',
+      minify: config.build?.minify !== false,
+      sourcemap: config.build?.sourcemap !== false,
+      external: ['koa', 'koa-router', 'koa-bodyparser', 'koa-static', '@vont/core'],
+      logLevel: 'info',
+    });
+
+    console.log('✅ Backend built');
+
+    // 清理生成的 server/index.ts
+    if (!serverExists) {
+      await cleanupTempFile(serverIndexPath, path.join(rootDir, 'server'));
+    }
+
+    // ========================================
+    // 5. 编译 API 模块
+    // ========================================
+    console.log('\n📦 Compiling API modules...');
+    const apiDistDir = path.join(outDir, 'api');
+
+    try {
+      const apiFiles = await findApiFiles(apiDir);
+
+      if (apiFiles.length > 0) {
+        await esbuild({
+          entryPoints: apiFiles,
+          outdir: apiDistDir,
+          format: 'esm',
+          platform: 'node',
+          target: config.build?.target || 'es2020',
+          minify: false, // API 模块不压缩，便于调试
+          splitting: false,
+          logLevel: 'info',
+        });
+
+        console.log(`✅ Compiled ${apiFiles.length} API modules\n`);
+      } else {
+        console.log('⚠️  No API files found\n');
+      }
+    } catch (error) {
+      const err = error as Error;
+      console.error('⚠️  Warning: Could not compile API files:', err.message);
+    }
+
+    console.log('✨ Build completed successfully!\n');
+  } catch (error) {
+    console.error('❌ Build failed:', error);
+    process.exit(1);
+  }
+}
+
+/**
+ * CLI 导出命令
+ */
+export async function buildCommand(): Promise<void> {
+  await buildProject();
+}
+

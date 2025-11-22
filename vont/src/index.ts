@@ -9,9 +9,16 @@ export * from './server/router-generator.js';
 // 导出客户端相关
 export * from './client/index.js';
 
+// 导出配置相关
+export * from './config/loader.js';
+
+// 导出生成器
+export * from './generators/virtual-client.js';
+export * from './generators/virtual-server.js';
+
+// 导出构建相关
+export * from './build/index.js';
+
 // 导出类型
 export * from './types/index.js';
-
-// 导出构建函数
-export { buildProject } from './cli/build.js';
 
