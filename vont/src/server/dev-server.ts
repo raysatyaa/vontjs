@@ -50,7 +50,26 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
     const vontDir = path.join(rootDir, '.vont');
     await fs.promises.mkdir(vontDir, { recursive: true });
     const clientPath = path.join(vontDir, 'client.tsx');
-    const virtualClientEntry = generateVirtualClient();
+    
+    // 检测框架类型（从配置或自动检测）
+    let framework: 'react' | 'vue' = config.framework || 'react';
+    if (!config.framework) {
+      // 自动检测：检查 package.json 中的依赖
+      try {
+        const pkgPath = path.join(rootDir, 'package.json');
+        const pkgContent = await fs.promises.readFile(pkgPath, 'utf-8');
+        const pkg = JSON.parse(pkgContent);
+        const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+        
+        if (allDeps.vue) {
+          framework = 'vue';
+        }
+      } catch {
+        // 使用默认值 react
+      }
+    }
+    
+    const virtualClientEntry = generateVirtualClient({ framework });
     await fs.promises.writeFile(clientPath, virtualClientEntry, 'utf-8');
 
     // 合并 Vite 配置
@@ -212,21 +231,46 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
     // 优雅关闭
     const shutdown = async (): Promise<void> => {
       console.log('\n🛑 Shutting down gracefully...');
-      apiWatcher.close();
-      await vite.close();
       
-      // 清理 .vont 目录
-      try {
-        await fs.promises.rm(vontDir, { recursive: true, force: true });
-        console.log('✅ Cleaned up .vont directory');
-      } catch {
-        // 忽略错误
-      }
-      
-      server.close(() => {
-        console.log('✅ Server closed');
+      // 设置强制退出超时（3秒）
+      const forceExitTimeout = setTimeout(() => {
+        console.log('⚠️  Force shutdown (timeout)');
         process.exit(0);
-      });
+      }, 3000);
+      
+      try {
+        // 关闭文件监听器（快速）
+        apiWatcher.close();
+        console.log('✅ API watcher closed');
+        
+        // 关闭 Vite 服务器（可能较慢）
+        const viteClosePromise = vite.close();
+        const viteTimeout = new Promise((resolve) => setTimeout(resolve, 2000));
+        await Promise.race([viteClosePromise, viteTimeout]);
+        console.log('✅ Vite server closed');
+        
+        // 清理 .vont 目录（快速）
+        try {
+          await fs.promises.rm(vontDir, { recursive: true, force: true });
+          console.log('✅ Cleaned up .vont directory');
+        } catch {
+          // 忽略清理错误
+        }
+        
+        // 关闭 HTTP 服务器（立即停止接受新连接）
+        server.close();
+        
+        // 强制关闭所有活动连接
+        server.closeAllConnections?.(); // Node.js 18.2.0+
+        
+        console.log('✅ Server closed');
+        clearTimeout(forceExitTimeout);
+        process.exit(0);
+      } catch (error) {
+        console.error('❌ Shutdown error:', error);
+        clearTimeout(forceExitTimeout);
+        process.exit(1);
+      }
     };
 
     process.on('SIGTERM', () => void shutdown());

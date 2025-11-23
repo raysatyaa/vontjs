@@ -1,4 +1,4 @@
-# @vont/core
+# vont
 
 > 🚀 A modern full-stack TypeScript framework combining Koa and React with file-based routing and hot module replacement
 
@@ -19,7 +19,7 @@
 ### In an existing project
 
 ```bash
-npm install @vont/core --save-dev
+npm install vont --save-dev
 ```
 
 ### Using file protocol (for local development)
@@ -28,7 +28,7 @@ npm install @vont/core --save-dev
 # In your package.json
 {
   "devDependencies": {
-    "@vont/core": "file:./vont"
+    "vont": "file:./vont"
   }
 }
 ```
@@ -222,7 +222,7 @@ If no configuration file is found, Vont uses sensible defaults.
 #### Basic Configuration (`vont.config.ts`)
 
 ```typescript
-import { defineConfig } from '@vont/core';
+import { defineConfig } from 'vont';
 
 export default defineConfig({
   // Server settings
@@ -244,7 +244,7 @@ export default defineConfig({
 #### Advanced Configuration
 
 ```typescript
-import { defineConfig } from '@vont/core';
+import { defineConfig } from 'vont';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
@@ -343,7 +343,7 @@ Vont provides sensible defaults for Vite configuration, so you **don't need a se
 
 ```typescript
 // vont.config.ts
-import { defineConfig } from '@vont/core';
+import { defineConfig } from 'vont';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 
@@ -411,7 +411,7 @@ const UsersPage = () => {
 Create a development server programmatically:
 
 ```typescript
-import { createDevServer } from '@vont/core';
+import { createDevServer } from 'vont';
 
 await createDevServer({
   root: process.cwd(),
@@ -439,9 +439,9 @@ await createDevServer({
 Create a production server programmatically:
 
 ```typescript
-import { createProdServer } from '@vont/core';
+import { createProdServer } from 'vont';
 // or
-import { startProductionServer } from '@vont/core';
+import { startProductionServer } from 'vont';
 
 await createProdServer({
   root: process.cwd(),
@@ -464,7 +464,7 @@ await createProdServer({
 Build project programmatically:
 
 ```typescript
-import { buildProject } from '@vont/core';
+import { buildProject } from 'vont';
 
 await buildProject({
   root: process.cwd(),
@@ -486,7 +486,7 @@ await buildProject({
 Load Vont configuration from project:
 
 ```typescript
-import { loadConfig } from '@vont/core';
+import { loadConfig } from 'vont';
 
 const config = await loadConfig(process.cwd());
 console.log(config.port); // 3000
@@ -497,7 +497,7 @@ console.log(config.port); // 3000
 Type-safe configuration helper:
 
 ```typescript
-import { defineConfig } from '@vont/core';
+import { defineConfig } from 'vont';
 
 export default defineConfig({
   port: 3000,

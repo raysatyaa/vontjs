@@ -77,7 +77,26 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
     
     // 生成客户端入口文件
     const clientPath = path.join(vontDir, 'client.tsx');
-    const virtualClientContent = generateVirtualClient();
+    
+    // 检测框架类型（从配置或自动检测）
+    let framework: 'react' | 'vue' = config.framework || 'react';
+    if (!config.framework) {
+      // 自动检测：检查 package.json 中的依赖
+      try {
+        const pkgPath = path.join(rootDir, 'package.json');
+        const pkgContent = await fs.readFile(pkgPath, 'utf-8');
+        const pkg = JSON.parse(pkgContent);
+        const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+        
+        if (allDeps.vue) {
+          framework = 'vue';
+        }
+      } catch {
+        // 使用默认值 react
+      }
+    }
+    
+    const virtualClientContent = generateVirtualClient({ framework });
     await fs.writeFile(clientPath, virtualClientContent, 'utf-8');
 
     // ========================================
@@ -186,7 +205,7 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
       target: config.build?.target || 'es2020',
       minify: config.build?.minify !== false,
       sourcemap: config.build?.sourcemap !== false,
-      external: ['koa', 'koa-router', 'koa-bodyparser', 'koa-static', '@vont/core'],
+      external: ['koa', 'koa-router', 'koa-bodyparser', 'koa-static', 'vont'],
       logLevel: 'info',
     });
 

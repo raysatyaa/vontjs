@@ -88,7 +88,7 @@ This example includes three configuration files demonstrating different use case
 Complete configuration with all available options and detailed comments:
 
 ```typescript
-import { defineConfig } from '@vont/core';
+import { defineConfig } from 'vont';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({

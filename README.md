@@ -12,7 +12,7 @@
 
 This repository contains:
 
-- **`vont/`** - The core `@vont/core` npm package
+- **`vont/`** - The core `vont` npm package
 - **`demo/`** - Example application showcasing Vont features
 
 ---
@@ -35,7 +35,7 @@ This repository contains:
 ### Installation
 
 ```bash
-npm install @vont/core
+npm install vont
 ```
 
 ### Project Setup
@@ -107,7 +107,7 @@ For complete documentation, see the [Vont Core Package README](./vont/README.md)
 
 ## 📁 Package Structure
 
-### `@vont/core` Package
+### `vont` Package
 
 The core framework package (`vont/`):
 
@@ -199,7 +199,7 @@ export default UsersPage;
 
 ```typescript
 // vont.config.ts
-import { defineConfig } from '@vont/core';
+import { defineConfig } from 'vont';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 

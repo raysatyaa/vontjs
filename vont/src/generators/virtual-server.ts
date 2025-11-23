@@ -6,7 +6,7 @@ import type { VirtualServerOptions } from '../types/index.js';
  */
 export function generateVirtualServer(_options?: VirtualServerOptions): string {
   return `
-import { startProductionServer } from '@vont/core';
+import { startProductionServer } from 'vont';
 
 // 启动生产服务器
 startProductionServer();

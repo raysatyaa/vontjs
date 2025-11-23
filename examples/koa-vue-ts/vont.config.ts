@@ -1,9 +1,9 @@
 import { defineConfig } from 'vont';
 import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
+import vue from '@vitejs/plugin-vue';
 
 /**
- * Vont Framework Configuration - Minimal Example
+ * Vont Framework Configuration - Vue Example
  * 
  * This is a minimal configuration that only overrides what's necessary.
  * Vont will use sensible defaults for all other options.
@@ -16,8 +16,9 @@ export default defineConfig({
   viteConfig: {
     plugins: [
       tailwindcss(),
-      react(),
+      vue(),
     ],
   },
 
 });
+

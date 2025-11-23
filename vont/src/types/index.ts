@@ -1,5 +1,4 @@
 import type { Context, Next } from 'koa';
-import type { PluginOption, UserConfig as ViteUserConfig } from 'vite';
 
 // ========================================
 // 基础类型
@@ -56,6 +55,9 @@ export interface ApiModule {
 
 /**
  * Vont 框架配置接口
+ * 
+ * 注意：viteConfig 使用 any 类型以避免 Vite 版本不一致导致的类型冲突
+ * 这样可以兼容项目中不同版本的 Vite
  */
 export interface VontConfig {
   // 基础配置
@@ -69,8 +71,11 @@ export interface VontConfig {
   pagesDir?: string;
   outDir?: string;
   
-  // Vite 配置（完整的 Vite UserConfig）
-  viteConfig?: Partial<ViteUserConfig>;
+  // 前端框架类型（用于生成正确的客户端代码）
+  framework?: 'react' | 'vue';
+  
+  // Vite 配置（使用 any 避免版本冲突）
+  viteConfig?: any;
   
   // 服务器配置
   server?: {
@@ -115,6 +120,50 @@ export function defineConfig(config: VontConfig): VontConfig {
   return config;
 }
 
+/**
+ * 插件类型擦除辅助函数
+ * 用于避免不同 Vite 版本之间的类型冲突
+ * 
+ * @example
+ * ```ts
+ * import { defineConfig, vitePlugin } from 'vont';
+ * import vue from '@vitejs/plugin-vue';
+ * 
+ * export default defineConfig({
+ *   viteConfig: {
+ *     plugins: [
+ *       vitePlugin(vue()),
+ *     ],
+ *   },
+ * });
+ * ```
+ */
+export function vitePlugin(plugin: any): any {
+  return plugin;
+}
+
+/**
+ * 插件数组类型擦除辅助函数
+ * 用于处理返回插件数组的情况
+ * 
+ * @example
+ * ```ts
+ * import { defineConfig, vitePlugins } from 'vont';
+ * import tailwindcss from '@tailwindcss/vite';
+ * 
+ * export default defineConfig({
+ *   viteConfig: {
+ *     plugins: vitePlugins([
+ *       tailwindcss(),
+ *     ]),
+ *   },
+ * });
+ * ```
+ */
+export function vitePlugins(plugins: any[]): any[] {
+  return plugins;
+}
+
 // ========================================
 // 客户端类型
 // ========================================
@@ -137,6 +186,7 @@ export interface VontClientOptions {
 export interface VirtualClientOptions {
   stylesGlob?: string;
   pagesGlob?: string;
+  framework?: 'react' | 'vue';
 }
 
 /**
