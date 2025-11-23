@@ -24,13 +24,22 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
       const tsx = await import('tsx/esm/api');
       tsx.register();
       console.log('✅ TypeScript loader registered (tsx)');
-    } catch {
+    } catch (error) {
       console.warn('⚠️  tsx not available, TypeScript API routes may not work');
+      console.warn('   Error:', (error as Error).message);
     }
 
     // 加载配置
     const rootDir = options?.root || process.cwd();
     const config: VontConfig = await loadConfig(rootDir);
+    
+    // 调试：输出配置加载情况
+    console.log('📝 Config loaded:', {
+      framework: config.framework,
+      hasViteConfig: !!config.viteConfig,
+      hasPlugins: !!config.viteConfig?.plugins,
+      pluginsCount: Array.isArray(config.viteConfig?.plugins) ? config.viteConfig.plugins.length : 0,
+    });
     
     // 合并选项和配置
     const apiDir = options?.apiDir || config.apiDir || path.join(rootDir, 'src', 'api');
@@ -97,9 +106,12 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
         sourcemap: true,
       },
       resolve: {
+        ...viteConfig.resolve,
         alias: {
+          ...viteConfig.resolve?.alias,
           '@': path.join(rootDir, 'src'),
         },
+        dedupe: ['react', 'react-dom', 'react-router-dom'],
       },
       optimizeDeps: {
         include: ['react', 'react-dom', 'react-router-dom', 'vue', 'vue-router'],
@@ -231,14 +243,6 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
         const viteTimeout = new Promise((resolve) => setTimeout(resolve, 2000));
         await Promise.race([viteClosePromise, viteTimeout]);
         console.log('✅ Vite server closed');
-        
-        // 清理 .vont 目录（快速）
-        try {
-          await fs.promises.rm(vontDir, { recursive: true, force: true });
-          console.log('✅ Cleaned up .vont directory');
-        } catch {
-          // 忽略清理错误
-        }
         
         // 关闭 HTTP 服务器（立即停止接受新连接）
         server.close();

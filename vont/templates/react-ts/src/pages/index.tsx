@@ -7,7 +7,7 @@ const Home: React.FC = () => {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            🎉 Welcome to Vont Framework
+            🎉 Welcome to Vont React Example
           </h1>
           <p className="text-xl text-gray-600">
             A full-stack framework combining Koa and React

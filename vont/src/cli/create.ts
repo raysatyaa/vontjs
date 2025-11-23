@@ -8,20 +8,20 @@ import { createProject, isValidTemplate, getAvailableTemplates, getTemplateDescr
 // process.argv = [node, vont, create, project-name, --template=xxx]
 const args = process.argv.slice(3);
 const projectName = args.find(arg => !arg.startsWith('-'));
-const templateArg = args.find(arg => arg.startsWith('--template='));
-const template = templateArg?.split('=')[1];
+const templateArg = args.find(arg => arg.startsWith('--template'));
+const template = templateArg?.split(' ')[1];
 
 if (!projectName) {
   console.error('❌ Project name is required');
-  console.log('\nUsage: vont create <project-name> [--template=<template>]');
+  console.log('\nUsage: vont create <project-name> [--template <template>]');
   console.log('\nAvailable templates:');
   getAvailableTemplates().forEach((t) => {
     console.log(`  - ${t}: ${getTemplateDescription(t)}`);
   });
   console.log('\nExamples:');
   console.log('  vont create my-app');
-  console.log('  vont create my-app --template=react-ts');
-  console.log('  vont create my-app --template=vue-ts');
+  console.log('  vont create my-app --template react-ts');
+  console.log('  vont create my-app --template vue-ts');
   process.exit(1);
 }
 

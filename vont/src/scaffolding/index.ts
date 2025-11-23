@@ -97,17 +97,15 @@ export async function createProject(
   console.log(`\n📦 Creating project with ${getTemplateDescription(selectedTemplate)} template...\n`);
 
   // 获取模板路径
-  // __dirname 是 dist/scaffolding
-  // 需要向上两级到包根目录，然后进入 templates
-  const packageRoot = path.resolve(__dirname, '..', '..');
-  const templateDir = path.join(packageRoot, 'templates', selectedTemplate);
+  const distDir = path.resolve(__dirname, '..');
+  const templateDir = path.join(distDir, 'templates', selectedTemplate);
 
   // 检查模板是否存在
   try {
     await fs.access(templateDir);
   } catch {
     console.error(`❌ Template directory not found: ${templateDir}`);
-    console.error(`\n💡 Package root: ${packageRoot}`);
+    console.error(`\n💡 Dist directory: ${distDir}`);
     console.error(`💡 Make sure the vont package is properly installed with templates.`);
     process.exit(1);
   }

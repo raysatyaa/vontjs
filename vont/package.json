@@ -1,6 +1,6 @@
 {
   "name": "vont",
-  "version": "1.0.0-beta.15",
+  "version": "1.0.0-beta.19",
   "description": "A full-stack framework combining Koa and React with file-based routing",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,18 +14,15 @@
       "import": "./dist/index.js"
     },
     "./client": {
-      "types": "./dist/client/index.d.ts",
       "import": "./dist/client/index.js"
     },
     "./client/vue": {
-      "types": "./dist/client/vue.d.ts",
       "import": "./dist/client/vue.js"
     }
   },
   "files": [
     "dist",
     "bin",
-    "templates",
     "README.md"
   ],
   "scripts": {
@@ -61,23 +58,19 @@
     "@types/koa-router": "^7.4.8",
     "@types/koa-static": "^4.0.4",
     "@types/node": "^20.5.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "typescript": "^5.1.6",
-    "vue": "^3.5.24",
-    "vue-router": "^4.6.3"
+    "typescript": "^5.1.6"
   },
   "peerDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "react-router-dom": "^6.0.0",
-    "vue": "^3.0.0",
-    "vue-router": "^4.0.0",
+    "react-router-dom": "^6.30.2",
     "tailwindcss": "^4.0.0",
     "vite": "^7.2.0",
-    "@vitejs/plugin-vue": "^6.0.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "@vitejs/plugin-react": "^5.0.0"
+    "vue": "^3.0.0",
+    "vue-router": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "vue": {

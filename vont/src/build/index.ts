@@ -154,9 +154,12 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
         target: config.build?.target || 'es2020',
       },
       resolve: {
+        ...viteConfig.resolve,
         alias: {
+          ...viteConfig.resolve?.alias,
           '@': path.join(rootDir, 'src'),
         },
+        dedupe: ['react', 'react-dom', 'react-router-dom'],
       },
       optimizeDeps: {
         include: ['react', 'react-dom', 'react-router-dom', 'vue', 'vue-router'],

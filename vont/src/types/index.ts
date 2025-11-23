@@ -33,7 +33,7 @@ export interface RouteConfig {
  */
 export interface PageRouteConfig {
   path: string;
-  component: React.ComponentType<unknown>;
+  component: any; // 使用 any 避免强制依赖 React 类型
 }
 
 /**
@@ -172,8 +172,8 @@ export function vitePlugins(plugins: any[]): any[] {
  * Vont 客户端选项
  */
 export interface VontClientOptions {
-  pagesGlob: Record<string, { default: React.ComponentType }>;
-  notFoundComponent?: React.ComponentType;
+  pagesGlob: Record<string, { default: any }>; // 使用 any 避免强制依赖 React 类型
+  notFoundComponent?: any; // 使用 any 避免强制依赖 React 类型
 }
 
 // ========================================
