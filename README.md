@@ -67,11 +67,17 @@ your-project/
 │   │   └── app.css
 │   └── types/            # Shared types
 │       └── api.ts
+├── .vont/                # Framework internal files (auto-generated, git-ignored)
+│   └── client.tsx        # Generated client entry (don't edit)
 ├── index.html            # HTML entry (optional)
-├── vite.config.ts        # Vite configuration (optional)
 ├── vont.config.ts        # Vont configuration (optional)
+├── .gitignore            # Should include .vont/
 └── package.json
 ```
+
+> **Note**: 
+> - No `vite.config.ts` needed! All Vite settings are managed through `vont.config.ts`
+> - The `.vont/` directory is auto-generated and should be added to `.gitignore`
 
 ### Start Development
 
@@ -110,15 +116,35 @@ The core framework package (`vont/`):
 - **Build System** - Optimized production builds
 - **Route Registry** - Automatic API and page route detection
 - **Type System** - Complete TypeScript definitions
+- **Internal Files** - Auto-generated files in `.vont/` directory
 
-### Demo Application
+### Example Application
 
-Example application (`demo/`):
+Example application (`examples/koa-react-ts/`):
 
 - Complete working example
 - API routes demonstration
 - Page components with Tailwind CSS
 - Type-safe API integration
+
+### `.vont/` Directory
+
+Vont automatically creates a `.vont/` directory in your project root containing:
+
+- **`client.tsx`** - Auto-generated client entry point
+- Framework internal files (don't edit manually)
+
+**Important**: Add `.vont/` to your `.gitignore`:
+```gitignore
+# Vont Framework generated files
+.vont/
+```
+
+The `.vont/` directory is automatically:
+- ✅ Created when running `vont dev` or `vont build`
+- ✅ Cleaned up when the dev server stops
+- ✅ Ignored by Git (if in .gitignore)
+- ✅ Managed by the framework (no manual intervention needed)
 
 ---
 
@@ -175,15 +201,30 @@ export default UsersPage;
 // vont.config.ts
 import { defineConfig } from '@vont/core';
 import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
 
+export default defineConfig({
 export default defineConfig({
   port: 3000,
   apiPrefix: '/api',
-  vitePlugins: [tailwindcss()],
+  
+  // Complete Vite configuration (use native Vite config)
+  viteConfig: {
+    plugins: [
+      ...tailwindcss(),
+      ...react(),
+    ],
+    // Customize other Vite settings if needed
+    build: {
+      chunkSizeWarningLimit: 1000,
+    },
+  },
+  
   build: {
     sourcemap: true,
     minify: true,
   },
+});
 });
 ```
 
@@ -331,7 +372,7 @@ MIT © [Your Name]
 Built with:
 - [Koa](https://koajs.com/) - Backend framework
 - [React](https://react.dev/) - Frontend library
-- [Vite](https://vitejs.dev/) - Build tool
+- [Vite](https://vitejs.dev/) - Build tool (managed by Vont)
 - [esbuild](https://esbuild.github.io/) - API compiler
 - [TypeScript](https://www.typescriptlang.org/) - Type safety
 - [Chokidar](https://github.com/paulmillr/chokidar) - File watching

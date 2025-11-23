@@ -1,0 +1,22 @@
+# Vont Framework 生成的文件
+.vont/
+
+# 依赖
+node_modules/
+
+# 构建输出
+dist/
+
+# 日志
+*.log
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
+

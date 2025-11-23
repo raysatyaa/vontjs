@@ -1,5 +1,5 @@
 import type { Context, Next } from 'koa';
-import type { Plugin as VitePlugin, UserConfig as ViteUserConfig } from 'vite';
+import type { PluginOption, UserConfig as ViteUserConfig } from 'vite';
 
 // ========================================
 // 基础类型
@@ -69,8 +69,7 @@ export interface VontConfig {
   pagesDir?: string;
   outDir?: string;
   
-  // Vite 配置
-  vitePlugins?: VitePlugin[];
+  // Vite 配置（完整的 Vite UserConfig）
   viteConfig?: Partial<ViteUserConfig>;
   
   // 服务器配置

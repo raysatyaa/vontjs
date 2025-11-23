@@ -12,6 +12,7 @@
 - ⚛️ **React Pages** - File structure becomes page routes
 - 🎯 **Type Safety** - Share types between frontend and backend
 - 🏗️ **Production Ready** - Single unified deployment
+- 🔒 **Clean Architecture** - Internal files hidden in `.vont/` directory
 
 ## Installation
 
@@ -63,11 +64,19 @@ your-project/
 │   │   └── app.css
 │   └── types/            # Shared types
 │       └── api.ts
+├── .vont/                # Framework internal files (auto-generated, git-ignored)
+│   └── client.tsx        # Generated client entry (don't edit)
 ├── index.html            # HTML entry (optional)
-├── vite.config.ts        # Vite configuration (optional)
 ├── vont.config.ts        # Vont configuration (optional)
+├── .gitignore            # Should include .vont/
 └── package.json
 ```
+
+> **Important**: Add `.vont/` to your `.gitignore`:
+> ```gitignore
+> # Vont Framework generated files
+> .vont/
+> ```
 
 ### 3. Create an API Route
 
@@ -244,13 +253,12 @@ export default defineConfig({
   host: '0.0.0.0',
   apiPrefix: '/api/v1',
   
-  // Vite plugins (for frontend build)
-  vitePlugins: [
-    tailwindcss(),
-  ],
-  
-  // Custom Vite configuration
+  // Complete Vite configuration (use native Vite config)
   viteConfig: {
+    plugins: [
+      ...tailwindcss(),
+      ...react(),
+    ],
     resolve: {
       alias: {
         '@': '/src',
@@ -284,7 +292,9 @@ export default defineConfig({
 export default {
   port: 3000,
   apiPrefix: '/api',
-  vitePlugins: [],
+  viteConfig: {
+    plugins: [],
+  },
 };
 ```
 
@@ -298,8 +308,7 @@ export default {
 | `apiDir` | `string` | `'src/api'` | API directory path |
 | `pagesDir` | `string` | `'src/pages'` | Pages directory path |
 | `outDir` | `string` | `'dist'` | Build output directory |
-| `vitePlugins` | `Plugin[]` | `[]` | Vite plugins array |
-| `viteConfig` | `object` | `{}` | Custom Vite configuration |
+| `viteConfig` | `ViteConfig` | `{}` | Complete Vite configuration (including plugins) |
 | `server.hmrPort` | `number` | `3001` | HMR WebSocket port |
 | `server.middlewares` | `Middleware[]` | `[]` | Custom Koa middlewares |
 | `build.sourcemap` | `boolean` | `true` | Generate sourcemaps |
@@ -316,30 +325,53 @@ HOST=localhost vont dev
 HMR_PORT=4001 vont dev
 ```
 
-#### Using `vite.config.ts`
+#### Built-in Vite Configuration
 
-You can still use a separate `vite.config.ts` for Vite-specific configuration:
+Vont provides sensible defaults for Vite configuration, so you **don't need a separate `vite.config.ts`** file. All Vite settings are managed through the `viteConfig` field in `vont.config.ts`:
+
+**Default Vite Configuration:**
+
+- ✅ `server.middlewareMode: true` - For Koa integration
+- ✅ `server.hmr.port` - Automatically set from config
+- ✅ `server.watch.usePolling: false` - Optimized file watching
+- ✅ `build.outDir: 'dist/client'` - Client output directory
+- ✅ `build.rollupOptions.input: 'index.html'` - Entry point
+- ✅ `resolve.alias['@']: '/src'` - Path alias
+- ✅ `optimizeDeps.include: ['react', 'react-dom', 'react-router-dom']` - Pre-bundle dependencies
+
+**Use Native Vite Configuration:**
 
 ```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+// vont.config.ts
+import { defineConfig } from '@vont/core';
 import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    react(),
-  ],
-  server: {
-    middlewareMode: true, // Required for Vont
-  },
-  build: {
-    outDir: 'dist/client',
+  port: 3000,
+  
+  // Use complete native Vite configuration
+  viteConfig: {
+    // Vite plugins (use native Vite plugin config)
+    plugins: [
+      ...tailwindcss(),
+      ...react(),
+    ],
+    
+    // Add or override any Vite configuration
+    resolve: {
+      alias: {
+        '@components': '/src/components',
+      },
+    },
+    build: {
+      chunkSizeWarningLimit: 1000,
+    },
   },
 });
 ```
 
-> **Note**: If both `vont.config.ts` and `vite.config.ts` exist, settings in `vont.config.ts` take precedence.
+> **Note**: You no longer need to install `vite` as a project dependency. Vont includes it internally.
 
 ### Type Safety
 
@@ -735,6 +767,8 @@ dist/
     └── users.js
 ```
 
+> **Note**: The `.vont/` directory is automatically cleaned up after build and should not be included in production deployments.
+
 ### Starting Production Server
 
 ```bash
@@ -840,6 +874,12 @@ npm run build
 
 **Q: Do I need both `vont.config.ts` and `vite.config.ts`?**  
 A: No, `vont.config.ts` is sufficient for most cases. Use `vite.config.ts` only for advanced Vite-specific features.
+
+**Q: What is the `.vont/` directory?**  
+A: It's an auto-generated directory containing framework internal files (like `client.tsx`). It's automatically created during development and cleaned up when not needed. Always add it to your `.gitignore`.
+
+**Q: Can I edit files in `.vont/` directory?**  
+A: No, don't edit these files manually. They are auto-generated by Vont and will be overwritten. If you need to customize client behavior, use `vont.config.ts`.
 
 **Q: Can I use other CSS frameworks?**  
 A: Yes! Vont works with any CSS solution: CSS Modules, Styled Components, Emotion, Tailwind CSS, etc.

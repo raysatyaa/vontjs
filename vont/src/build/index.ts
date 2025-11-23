@@ -70,37 +70,91 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
     console.log('🔨 Building project...\n');
 
     // ========================================
-    // 1. 生成虚拟 client.tsx
+    // 1. 准备 .vont 目录
     // ========================================
-    const clientPath = path.join(rootDir, 'client.tsx');
-    const clientExists = await fs.access(clientPath).then(() => true).catch(() => false);
+    const vontDir = path.join(rootDir, '.vont');
+    await fs.mkdir(vontDir, { recursive: true });
     
-    if (!clientExists) {
-      console.log('📝 Generating virtual client.tsx...');
-      const virtualClientContent = generateVirtualClient();
-      await fs.writeFile(clientPath, virtualClientContent, 'utf-8');
-      console.log('✅ Virtual client.tsx generated\n');
-    }
+    // 生成客户端入口文件
+    const clientPath = path.join(vontDir, 'client.tsx');
+    const virtualClientContent = generateVirtualClient();
+    await fs.writeFile(clientPath, virtualClientContent, 'utf-8');
 
     // ========================================
     // 2. 构建前端代码
     // ========================================
     console.log('📦 Building frontend...');
     
-    // 合并用户的 Vite 配置
+    // 合并用户的 Vite 配置，提供合理的默认值
     const viteConfig = config.viteConfig || {};
+    
+    // 准备 Vite 插件列表
+    const vitePlugins = [
+      // 用户配置的 Vite 插件
+      ...(Array.isArray(viteConfig.plugins) ? viteConfig.plugins : viteConfig.plugins ? [viteConfig.plugins] : []),
+    ];
+    
+    // 生成临时的 index.html（如果项目中不存在）
+    const indexHtmlPath = path.join(rootDir, 'index.html');
+    const indexHtmlExists = await fs.access(indexHtmlPath).then(() => true).catch(() => false);
+    
+    if (!indexHtmlExists) {
+      console.log('📝 Generating temporary index.html...');
+      const tempHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vont App</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/.vont/client.tsx"></script>
+</body>
+</html>`;
+      await fs.writeFile(indexHtmlPath, tempHtml, 'utf-8');
+    }
+    
     await viteBuild({
       root: rootDir,
-      plugins: config.vitePlugins || [],
+      plugins: vitePlugins,
+      build: {
+        outDir: path.join(outDir, 'client'),
+        emptyOutDir: false,
+        rollupOptions: {
+          input: indexHtmlPath,
+          output: {
+            entryFileNames: 'assets/[name].[hash].js',
+            chunkFileNames: 'assets/[name].[hash].js',
+            assetFileNames: 'assets/[name].[hash][extname]',
+          },
+        },
+        sourcemap: config.build?.sourcemap !== false,
+        minify: config.build?.minify !== false,
+        target: config.build?.target || 'es2020',
+        ...viteConfig.build,
+      },
+      resolve: {
+        alias: {
+          '@': path.join(rootDir, 'src'),
+          ...viteConfig.resolve?.alias,
+        },
+        ...viteConfig.resolve,
+      },
+      optimizeDeps: {
+        include: ['react', 'react-dom', 'react-router-dom'],
+        ...viteConfig.optimizeDeps,
+      },
       ...viteConfig,
     });
     
     console.log('✅ Frontend built\n');
 
-    // 清理生成的 client.tsx
-    if (!clientExists) {
-      await cleanupTempFile(clientPath);
+    // 清理临时生成的 index.html 和 .vont 目录
+    if (!indexHtmlExists) {
+      await cleanupTempFile(indexHtmlPath);
     }
+    await fs.rm(vontDir, { recursive: true, force: true });
 
     // ========================================
     // 3. 生成虚拟 server/index.ts

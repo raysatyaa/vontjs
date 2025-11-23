@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createHttpServer } from 'http';
 import { createServer as createViteServer } from 'vite';
@@ -45,40 +46,60 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
 
     console.log('🔧 Initializing development server...');
 
-    // 生成虚拟 client 入口
+    // 生成虚拟客户端入口代码并写入 .vont 目录
+    const vontDir = path.join(rootDir, '.vont');
+    await fs.promises.mkdir(vontDir, { recursive: true });
+    const clientPath = path.join(vontDir, 'client.tsx');
     const virtualClientEntry = generateVirtualClient();
+    await fs.promises.writeFile(clientPath, virtualClientEntry, 'utf-8');
 
-    // 创建 Vite 服务器
+    // 合并 Vite 配置
+    const viteConfig = config.viteConfig || {};
+    
+    // 准备 Vite 插件列表（移除虚拟模块插件）
     const vitePlugins = [
-      // 虚拟模块插件
-      {
-        name: 'vont-virtual-client',
-        resolveId(id: string) {
-          if (id === '/client.tsx' || id === '/client.jsx') {
-            return '\0virtual:vont-client';
-          }
-          return null;
-        },
-        load(id: string) {
-          if (id === '\0virtual:vont-client') {
-            return virtualClientEntry;
-          }
-          return null;
-        },
-      },
-      ...(config.vitePlugins || []),
+      // 用户配置的 Vite 插件
+      ...(Array.isArray(viteConfig.plugins) ? viteConfig.plugins : viteConfig.plugins ? [viteConfig.plugins] : []),
     ];
 
-    const viteConfig = config.viteConfig || {};
     const vite: ViteDevServer = await createViteServer({
       appType: 'custom',
       root: rootDir,
       plugins: vitePlugins,
       server: {
+        host: HOST,
+        port: PORT,
+        strictPort: false,
         middlewareMode: true,
         hmr: {
+          overlay: true,
           port: HMR_PORT,
         },
+        watch: {
+          usePolling: false,
+          interval: 100,
+        },
+        ...viteConfig.server,
+      },
+      build: {
+        outDir: path.join(config.outDir || 'dist', 'client'),
+        emptyOutDir: false,
+        rollupOptions: {
+          input: path.join(rootDir, 'index.html'),
+        },
+        sourcemap: true,
+        ...viteConfig.build,
+      },
+      resolve: {
+        alias: {
+          '@': path.join(rootDir, 'src'),
+          ...viteConfig.resolve?.alias,
+        },
+        ...viteConfig.resolve,
+      },
+      optimizeDeps: {
+        include: ['react', 'react-dom', 'react-router-dom'],
+        ...viteConfig.optimizeDeps,
       },
       logLevel: 'info',
       ...viteConfig,
@@ -141,7 +162,17 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
 
     // 提供开发 HTML（SPA 回退）
     app.use(async (ctx) => {
-      if (!ctx.path.startsWith('/api') && !ctx.body) {
+      // 检查响应是否已经被处理（Vite 中间件可能已经处理了请求）
+      if (ctx.res.headersSent || ctx.respond === false) {
+        return;
+      }
+      
+      // 只为未处理的非 API 路径提供 HTML
+      // 排除 /@vont/ 和其他 Vite 特殊路径
+      if (!ctx.path.startsWith('/api') && 
+          !ctx.path.startsWith('/.vont/') && 
+          !ctx.path.startsWith('/@') && 
+          !ctx.body) {
         ctx.type = 'text/html';
         ctx.body = await vite.transformIndexHtml(
           ctx.path,
@@ -154,7 +185,7 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
 </head>
 <body>
   <div id="root"></div>
-  <script type="module" src="/client.tsx"></script>
+  <script type="module" src="/.vont/client.tsx"></script>
 </body>
 </html>`
         );
@@ -183,6 +214,15 @@ export async function createDevServer(options?: DevServerOptions): Promise<void>
       console.log('\n🛑 Shutting down gracefully...');
       apiWatcher.close();
       await vite.close();
+      
+      // 清理 .vont 目录
+      try {
+        await fs.promises.rm(vontDir, { recursive: true, force: true });
+        console.log('✅ Cleaned up .vont directory');
+      } catch {
+        // 忽略错误
+      }
+      
       server.close(() => {
         console.log('✅ Server closed');
         process.exit(0);

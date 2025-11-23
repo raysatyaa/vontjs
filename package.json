@@ -1,18 +1,18 @@
 {
-  "name": "vont-monorepo",
+  "name": "vontjs",
   "version": "1.0.0",
   "description": "Vont Framework - Full-stack Koa + React framework",
   "private": true,
   "workspaces": [
     "vont",
-    "demo"
+    "examples/koa-react-ts"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=demo",
-    "build": "npm run build --workspace=vont && npm run build --workspace=demo",
-    "start": "npm run start --workspace=demo",
+    "dev": "npm run dev --workspace=examples/koa-react-ts",
+    "build": "npm run build --workspace=vont && npm run build --workspace=examples/koa-react-ts",
+    "start": "npm run start --workspace=examples/koa-react-ts",
     "build:vont": "npm run build --workspace=vont",
-    "build:demo": "npm run build --workspace=demo"
+    "build:examples/koa-react-ts": "npm run build --workspace=examples/koa-react-ts"
   },
   "keywords": [
     "koa",
@@ -22,6 +22,14 @@
     "typescript",
     "vite"
   ],
-  "author": "",
+  "author": "korbinzhao",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/korbinzhao/vontjs.git"
+  },
+  "homepage": "https://github.com/korbinzhao/vontjs",
+  "bugs": {
+    "url": "https://github.com/korbinzhao/vontjs/issues"
+  },
   "license": "MIT"
 }

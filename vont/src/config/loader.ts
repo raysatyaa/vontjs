@@ -48,7 +48,6 @@ export function getDefaultConfig(rootDir: string): VontConfig {
     apiDir: path.join(rootDir, 'src', 'api'),
     pagesDir: path.join(rootDir, 'src', 'pages'),
     outDir: path.join(rootDir, 'dist'),
-    vitePlugins: [],
     server: {
       hmrPort: parseInt(process.env.HMR_PORT || '3001', 10),
       middlewares: [],
