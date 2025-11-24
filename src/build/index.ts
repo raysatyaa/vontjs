@@ -64,7 +64,7 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
     
     // 合并构建选项
     const outDir = options?.outDir || config.outDir || path.join(rootDir, 'dist');
-    const serverDir = options?.serverDir || path.join(outDir, 'server');
+    const serverDir = options?.serverDir || outDir;
     const apiDir = options?.apiDir || config.apiDir || path.join(rootDir, 'src', 'api');
 
     console.log('🔨 Building project...\n');
@@ -137,7 +137,7 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
     
     await viteBuild({
       root: rootDir,
-      plugins: viteConfig.plugins, 
+      plugins: vitePlugins, 
       build: {
         outDir: path.join(outDir, 'client'),
         emptyOutDir: false,
@@ -159,7 +159,7 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
           ...viteConfig.resolve?.alias,
           '@': path.join(rootDir, 'src'),
         },
-        dedupe: ['react', 'react-dom', 'react-router-dom'],
+        dedupe: ['react', 'react-dom', 'react-router-dom', 'vue', 'vue-router'],
       },
       optimizeDeps: {
         include: ['react', 'react-dom', 'react-router-dom', 'vue', 'vue-router'],
@@ -168,36 +168,33 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
     
     console.log('✅ Frontend built\n');
 
-    // 清理临时生成的 index.html 和 .vont 目录
+    // 清理前端构建的临时文件
     if (!indexHtmlExists) {
       await cleanupTempFile(indexHtmlPath);
     }
-    await fs.rm(vontDir, { recursive: true, force: true });
+    await cleanupTempFile(clientPath);
 
     // ========================================
-    // 3. 生成虚拟 server/index.ts
+    // 3. 生成并编译后端代码
     // ========================================
     console.log('📦 Building backend...');
     
     await fs.mkdir(serverDir, { recursive: true });
 
-    const serverIndexPath = path.join(rootDir, 'server', 'index.ts');
-    const serverExists = await fs.access(serverIndexPath).then(() => true).catch(() => false);
+    console.log('🔍 Server directory:', serverDir);
+
+    // 使用 .vont 目录存放临时 server 文件
+    const tempServerPath = path.join(vontDir, 'server.ts');
     
-    if (!serverExists) {
-      await fs.mkdir(path.join(rootDir, 'server'), { recursive: true });
-      const virtualServerContent = generateVirtualServer();
-      await fs.writeFile(serverIndexPath, virtualServerContent, 'utf-8');
-    }
+    const virtualServerContent = generateVirtualServer();
+    await fs.writeFile(tempServerPath, virtualServerContent, 'utf-8');
 
     // ========================================
-    // 4. 编译后端代码
+    // 4. 编译后端代码，输出为 index.js
     // ========================================
-    const serverFiles = [serverIndexPath];
-
     await esbuild({
-      entryPoints: serverFiles,
-      outdir: serverDir,
+      entryPoints: [tempServerPath],
+      outfile: path.join(serverDir, 'index.js'),
       bundle: true,
       format: 'esm',
       platform: 'node',
@@ -210,10 +207,8 @@ export async function buildProject(options?: BuildOptions): Promise<void> {
 
     console.log('✅ Backend built');
 
-    // 清理生成的 server/index.ts
-    if (!serverExists) {
-      await cleanupTempFile(serverIndexPath, path.join(rootDir, 'server'));
-    }
+    // 清理临时文件
+    await fs.rm(vontDir, { recursive: true, force: true });
 
     // ========================================
     // 5. 编译 API 模块

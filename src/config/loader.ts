@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'url';
 import path from 'path';
 import { promises as fs } from 'fs';
+import { build } from 'esbuild';
 import type { VontConfig } from '../types/index.js';
 
 /**
@@ -20,8 +21,42 @@ export async function loadConfig(rootDir: string): Promise<VontConfig> {
       await fs.access(configPath);
       console.log(`📝 Loading config from: ${file}`);
       
-      // 动态导入配置文件
-      const configModule = await import(pathToFileURL(configPath).href);
+      let configModule;
+      
+      // 如果是 TypeScript 文件，使用 esbuild 编译后再导入
+      if (file.endsWith('.ts')) {
+        const tempDir = path.join(rootDir, '.vont');
+        const tempFile = path.join(tempDir, 'config.mjs');
+        
+        try {
+          // 确保临时目录存在
+          await fs.mkdir(tempDir, { recursive: true });
+          
+          // 使用 esbuild 编译配置文件（不打包依赖）
+          await build({
+            entryPoints: [configPath],
+            outfile: tempFile,
+            format: 'esm',
+            platform: 'node',
+            bundle: false,
+            logLevel: 'silent',
+          });
+          
+          // 导入编译后的配置
+          const timestamp = Date.now();
+          configModule = await import(pathToFileURL(tempFile).href + `?t=${timestamp}`);
+          
+          // 清理临时文件
+          await fs.unlink(tempFile).catch(() => {});
+        } catch (error) {
+          console.error(`⚠️  Failed to compile config file:`, error);
+          throw error;
+        }
+      } else {
+        // JS/MJS 文件直接导入
+        configModule = await import(pathToFileURL(configPath).href);
+      }
+      
       const config = configModule.default || configModule;
       
       return mergeWithDefaults(config, rootDir);
